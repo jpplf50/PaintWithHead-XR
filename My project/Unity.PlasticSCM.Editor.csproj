@@ -362,9 +362,9 @@
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\Views\Branch\BranchesListHeaderState.cs" />
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\Configuration\MissingEncryptionPasswordPromptHandler.cs" />
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\UI\Tree\ListViewItemIds.cs" />
-    <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\ExternalLink.cs" />
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\Views\History\HistoryListHeaderState.cs" />
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\Developer\UpdateReport\UpdateReportListHeaderState.cs" />
+    <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\ExternalLink.cs" />
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\Developer\IncomingChangesNotifier.cs" />
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\UI\DrawTextBlockWithEndLink.cs" />
     <Compile Include="Library\PackageCache\com.unity.collab-proxy@2.6.0\Editor\Views\CreateWorkspace\Dialogs\CreateRepositoryDialog.cs" />

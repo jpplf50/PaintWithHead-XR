@@ -124,8 +124,8 @@
     <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\Bindings\Variables\BindableVariableBase.cs" />
     <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\Bindings\EventBinding.cs" />
     <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\Datums\Datum.cs" />
-    <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\Bindings\BindingsGroup.cs" />
     <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\ScriptableSettingsBase.cs" />
+    <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\Bindings\BindingsGroup.cs" />
     <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\XRLoggingUtils.cs" />
     <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\XROrigin.cs" />
     <Compile Include="Library\PackageCache\com.unity.xr.core-utils@2.3.0\Runtime\ObjectPool.cs" />
