@@ -3,6 +3,7 @@ using UnityEngine.XR;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.IO;
 
 public class HeadDrawing : MonoBehaviour
 {
@@ -14,6 +15,9 @@ public class HeadDrawing : MonoBehaviour
     private Texture2D drawingTexture;
     private RectTransform canvasRect;
     private bool isDrawing = false; // Toggle for drawing
+
+    public float indicatorFollowSpeed = 0.1f; // Speed at which the indicator follows
+    private Vector3 indicatorTargetPosition; // Target position for the indicator
 
     // Input action for the grab button
     public InputActionReference grabAction;
@@ -218,7 +222,17 @@ public class HeadDrawing : MonoBehaviour
             cursorLine.positionCount = 2;
             cursorLine.startWidth = 0.005f;
             cursorLine.endWidth = 0.005f;
-            cursorLine.material = new Material(Shader.Find("Unlit/Color")) { color = new Color(brushColor.r, brushColor.g, brushColor.b, 0.3f) }; // Brush color line with alpha
+            //cursorLine.material = new Material(Shader.Find("Unlit/Color")) { color = new Color(brushColor.r, brushColor.g, brushColor.b, 0.3f) }; // Brush color line with alpha
+            Shader unlitShader = Shader.Find("Unlit/Color");
+            if (unlitShader != null)
+            {
+                cursorLine.material = new Material(unlitShader) { color = new Color(brushColor.r, brushColor.g, brushColor.b, 0.3f) };
+            }
+            else
+            {
+                Debug.LogError("Unlit/Color shader not found! Using fallback shader.");
+                cursorLine.material = new Material(Shader.Find("Standard")) { color = new Color(brushColor.r, brushColor.g, brushColor.b, 0.3f) };
+            }
         }
 
         // Initialize color tone spheres
@@ -258,12 +272,30 @@ public class HeadDrawing : MonoBehaviour
             Debug.Log("Drawing toggled: " + isDrawing);
         }
 
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            SaveCanvasAsImage();
+        }
+
         // Perform a raycast from the head (Main Camera)
         Ray ray = new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, raycastDistance))
         {
+            // Set the target position for the progress indicator
+            indicatorTargetPosition = Vector3.Lerp(transform.position, hit.point, 0.5f); // Adjust the lerp factor as needed
+
+            // Smoothly move the progress indicator toward the target position
+            if (progressIndicator != null)
+            {
+                progressIndicator.transform.LookAt(Camera.main.transform); // Look at the camera
+                progressIndicator.rectTransform.position = Vector3.Lerp(
+                    progressIndicator.rectTransform.position,
+                    indicatorTargetPosition,
+                    indicatorFollowSpeed
+                );
+            }
             // Update the cursor line
             if (cursorLine != null)
             {
@@ -490,10 +522,30 @@ public class HeadDrawing : MonoBehaviour
                     break;
                 }
             }
+
+            bool isLookingAtSaveCanvas = false;
+            if (hit.collider.CompareTag("SaveButton"))
+            {
+                isLookingAtSaveCanvas = true;
+                gazeTimer += Time.deltaTime;
+
+                // Update progress indicator
+                if (progressIndicator != null)
+                {
+                    progressIndicator.fillAmount = gazeTimer / 2f;
+                }
+
+                if (gazeTimer >= 2f)
+                {
+                    SaveCanvasAsImage();
+                    Debug.Log("Saved the canvas as an image");
+                    gazeTimer = 0f; // Reset the timer
+                }
+            }
             
 
             // Reset progress if not looking at a sphere or brush size control
-            if (!isLookingAtSphere && !isLookingAtBrushSizeControl && !isLookingAtClearCanvas && !isLookingAtPlusSign && !isLookingAtColorTone)
+            if (!isLookingAtSphere && !isLookingAtBrushSizeControl && !isLookingAtClearCanvas && !isLookingAtPlusSign && !isLookingAtColorTone && !isLookingAtSaveCanvas)
             {
                 gazeTimer = 0f;
                 brushSizeGazeTimer = 0f;
@@ -612,5 +664,52 @@ public class HeadDrawing : MonoBehaviour
         }
         drawingTexture.SetPixels(clearPixels);
         drawingTexture.Apply();
+    }
+
+    public void SaveCanvasAsImage()
+    {
+        // Create a Texture2D from the drawing texture
+        Texture2D texture = new Texture2D(drawingTexture.width, drawingTexture.height, TextureFormat.RGB24, false);
+        texture.SetPixels(drawingTexture.GetPixels());
+        texture.Apply();
+
+        texture = FlipTextureVertically(texture); // Flip the texture vertically
+
+        // Encode the texture to a PNG file
+        byte[] bytes = texture.EncodeToPNG();
+        Destroy(texture); // Free up memory
+
+        // Define the file path
+        string filePath = Application.persistentDataPath + "/CanvasArtwork.png";
+        int fileNumber = 1;
+        while (File.Exists(filePath))
+        {
+            filePath = Application.persistentDataPath + "/CanvasArtwork_" + fileNumber + ".png";
+            fileNumber++;
+        }
+
+        // Save the file
+        File.WriteAllBytes(filePath, bytes);
+
+        Debug.Log("Canvas saved to: " + filePath);
+    }
+
+    // Helper method to flip the texture vertically
+    private Texture2D FlipTextureVertically(Texture2D original)
+    {
+        Texture2D flipped = new Texture2D(original.width, original.height);
+        int width = original.width;
+        int height = original.height;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                flipped.SetPixel(width - x - 1, y, original.GetPixel(x, y));
+            }
+        }
+
+        flipped.Apply();
+        return flipped;
     }
 }
