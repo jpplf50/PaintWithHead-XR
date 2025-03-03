@@ -1,4 +1,4 @@
-# VR Drawing App
+# Paint With Head XR
 
 ![Project Logo or Banner](./Assets/demo-gif.gif) <!-- Replace with an actual image or banner -->
 
