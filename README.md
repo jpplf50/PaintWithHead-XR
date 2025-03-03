@@ -52,7 +52,7 @@ A virtual reality (VR) application that allows users to draw in 3D space using h
 ### Steps
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/vr-drawing-app.git
+   git clone https://github.com/jpplf50/PaintWithHead-XR.git
 2. Open the project in Unity.
 3. Ensure the following packages are installed:
    - **OpenXR Plugin**
