@@ -1,8 +1,8 @@
 # VR Drawing App
 
-![Project Logo or Banner](https://via.placeholder.com/1200x400) <!-- Replace with an actual image or banner -->
+![Project Logo or Banner](./Assets/demo-gif.gif) <!-- Replace with an actual image or banner -->
 
-A virtual reality (VR) application that allows users to draw in 3D space using head movements and intuitive interactions. Built with Unity and designed for VR headsets like Oculus Quest.
+A virtual reality (VR) application that allows users to draw in 3D space using head movements and intuitive interactions. Built with Unity and designed for VR headsets like Oculus Quest 2.
 
 ---
 
@@ -13,8 +13,7 @@ A virtual reality (VR) application that allows users to draw in 3D space using h
 4. [Usage](#usage)
 5. [Screenshots](#screenshots)
 6. [Contributing](#contributing)
-7. [License](#license)
-8. [Acknowledgements](#acknowledgements)
+7. [Acknowledgements](#acknowledgements)
 
 ---
 
@@ -80,14 +79,14 @@ A virtual reality (VR) application that allows users to draw in 3D space using h
 
 ## Screenshots
 
-![Screenshot 1](https://via.placeholder.com/400x300) <!-- Replace with actual screenshots -->
-*Drawing in VR*
+![Screenshot 1](./Assets/print1.jpg) <!-- Replace with actual screenshots -->
 
-![Screenshot 2](https://via.placeholder.com/400x300)
-*Color Selection Menu*
 
-![Screenshot 3](https://via.placeholder.com/400x300)
-*Saved Artwork Example*
+![Screenshot 2](./Assets/print2.jpg)
+
+
+![Screenshot 3](./Assets/print3.jpg)
+
 
 ---
 
@@ -103,18 +102,11 @@ Contributions are welcome! If you'd like to contribute, please follow these step
 
 ---
 
-## License
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
----
-
 ## Acknowledgements
 
 - **Unity Technologies** for the Unity engine.
 - **Oculus** for the VR hardware and SDK.
 - **OpenXR** for cross-platform VR support.
-- [Your Name] for developing this project.
 
 ---
 
@@ -122,9 +114,9 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 For questions or feedback, feel free to reach out:
 
-- **Your Name**: [Your Email Address]
-- **GitHub**: [Your GitHub Profile](https://github.com/your-username)
-- **Project Link**: [VR Drawing App](https://github.com/your-username/vr-drawing-app)
+- **Your Name**: [jpferreira@lasige.di.fc.ul.pt]
+- **GitHub**: [Your GitHub Profile](https://github.com/jpplf50)
+- **Project Link**: [VR Drawing App](https://github.com/jpplf50/PaintWithHead-XR)
 
 ---
 
