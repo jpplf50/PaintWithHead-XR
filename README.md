@@ -115,8 +115,8 @@ Contributions are welcome! If you'd like to contribute, please follow these step
 For questions or feedback, feel free to reach out:
 
 - **Email**: [jpferreira@lasige.di.fc.ul.pt]
-- **GitHub**: [Your GitHub Profile](https://github.com/jpplf50)
-- **Project**: [VR Drawing App](https://github.com/jpplf50/PaintWithHead-XR)
+- **GitHub**: [jpplf50](https://github.com/jpplf50)
+- **Project**: [PaintWithHead-XR](https://github.com/jpplf50/PaintWithHead-XR)
 
 ---
 
