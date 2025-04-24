@@ -11,6 +11,6 @@ public class LockPosition : MonoBehaviour
 
     void Update()
     {
-        transform.position = initialPosition; // Lock the position
+        //transform.position = initialPosition; // Lock the position
     }
 }

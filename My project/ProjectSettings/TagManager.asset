@@ -7,6 +7,8 @@ TagManager:
   - Canvas
   - PlusSign
   - SaveButton
+  - Forward
+  - Backward
   layers:
   - Default
   - TransparentFX

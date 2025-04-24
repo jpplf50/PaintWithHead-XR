@@ -7,6 +7,8 @@ using System.IO;
 
 public class HeadDrawing : MonoBehaviour
 {
+    public GameObject scene; // Whole scene (buttons + canvas)
+
     public Canvas drawingCanvas; // Assign your Canvas in the Inspector
     public float raycastDistance = 10f;
     public float brushSize = 0.01f; // Current brush size
@@ -542,16 +544,56 @@ public class HeadDrawing : MonoBehaviour
                     gazeTimer = 0f; // Reset the timer
                 }
             }
+
+            bool isLookingAtForward = false;
+            if (hit.collider.CompareTag("Forward"))
+            {
+                isLookingAtForward = true;
+                gazeTimer += Time.deltaTime;
+
+                // Update progress indicator
+                if (progressIndicator != null)
+                {
+                    progressIndicator.fillAmount = gazeTimer / 2f;
+                }
+
+                if (gazeTimer >= 2f)
+                {
+                    scene.transform.position += Camera.main.transform.forward * 0.2f; // Move the scene forward
+                    Debug.Log("Forward action triggered");
+                    gazeTimer = 0f; // Reset the timer
+                }
+            }
+
+            bool isLookingAtBackward = false;
+            if (hit.collider.CompareTag("Backward"))
+            {
+                isLookingAtBackward = true;
+                gazeTimer += Time.deltaTime;
+
+                // Update progress indicator
+                if (progressIndicator != null)
+                {
+                    progressIndicator.fillAmount = gazeTimer / 2f;
+                }
+
+                if (gazeTimer >= 2f)
+                {
+                    scene.transform.position -= Camera.main.transform.forward * 0.2f; // Move the scene backward
+                    Debug.Log("Backward action triggered");
+                    gazeTimer = 0f; // Reset the timer
+                }
+            }
             
 
             // Reset progress if not looking at a sphere or brush size control
-            if (!isLookingAtSphere && !isLookingAtBrushSizeControl && !isLookingAtClearCanvas && !isLookingAtPlusSign && !isLookingAtColorTone && !isLookingAtSaveCanvas)
+            if (!isLookingAtSphere && !isLookingAtBrushSizeControl && !isLookingAtClearCanvas && !isLookingAtPlusSign && !isLookingAtColorTone && !isLookingAtSaveCanvas && !isLookingAtForward && !isLookingAtBackward)
             {
                 gazeTimer = 0f;
                 brushSizeGazeTimer = 0f;
                 if (progressIndicator != null)
                 {
-                    progressIndicator.fillAmount = 0f;
+                    progressIndicator.fillAmount = 0f; // Reset progress indicator
                     progressIndicator.color = brushColor; // Reset progress indicator color
                 }
             }
