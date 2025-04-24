@@ -256,13 +256,16 @@ public class HeadDrawing : MonoBehaviour
                     sphere.transform.position = plusSign.transform.position + new Vector3(-i/3f, 0, -i/3f); // Position the spheres
                     sphere.transform.localScale = Vector3.one * 0.4f; // Scale down the spheres
                     sphere.GetComponent<Renderer>().material.color = colorTones[baseColor][i];
+                    sphere.transform.SetParent(plusSign.transform, worldPositionStays: true);
                     sphere.SetActive(false); // Hide initially
                     toneSpheres.Add(sphere);
                 }
                 colorToneSpheres[baseColor] = toneSpheres.ToArray();
             }
         }
-    }
+    } 
+    
+
 
     void Update()
     {
