@@ -4,10 +4,31 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.IO;
+using TMPro;
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+
 
 public class HeadDrawing : MonoBehaviour
 {
+    // Networking variables
+    private TcpListener tcpListener;
+    private Thread tcpThread;
+    private TcpClient connectedClient;
+    private NetworkStream stream;
+    public int port = 5005;
+
+
     public GameObject scene; // Whole scene (buttons + canvas)
+
+    private Vector2 smoothedLocalPoint; // Smoothed local point for drawing
+    private bool toggleLerp = false; // Toggle for lerping the indicator position
+    public float smoothingFactor = 0.1f; // Try 0.05 to 0.2 depending on responsiveness
+    private bool firstPoint = true; // Flag to check if it's the first point
+    public TextMeshProUGUI textToggleSmooth; // Assign the Text GameObject in the Inspector
 
     public Canvas drawingCanvas; // Assign your Canvas in the Inspector
     public float raycastDistance = 10f;
@@ -173,6 +194,7 @@ public class HeadDrawing : MonoBehaviour
     private string currentToneGroup = ""; // Currently visible tone group
     void Start()
     {
+        PrintLocalIPAddress(); // Print the local IP address
         // Initialize the drawing texture
         canvasRect = drawingCanvas.GetComponent<RectTransform>();
         drawingTexture = new Texture2D((int)canvasRect.sizeDelta.x, (int)canvasRect.sizeDelta.y);
@@ -239,6 +261,13 @@ public class HeadDrawing : MonoBehaviour
 
         // Initialize color tone spheres
         InitializeColorTones();
+
+        Debug.Log("Starting TCP thread...");
+        tcpThread = new Thread(StartServer);
+        tcpThread.IsBackground = true;
+        tcpThread.Start();
+
+        
     }
 
     void InitializeColorTones()
@@ -270,16 +299,51 @@ public class HeadDrawing : MonoBehaviour
     void Update()
     {
         // Toggle drawing when the grab button is pressed
-        if (grabAction.action.triggered)
+        if (grabAction.action.triggered || Input.GetKeyDown(KeyCode.D))
         {
             isDrawing = !isDrawing; // Toggle the drawing state
             cursorLine.enabled = !isDrawing; // Show the cursor line when not drawing
             Debug.Log("Drawing toggled: " + isDrawing);
+            if(isDrawing)
+                firstPoint = true; //make sure first point is not smothed
+        }
+
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            ClearTexture();
+            Debug.Log("Canvas cleared");
+        }
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            Transform cam = Camera.main.transform;
+
+            // Step 1: Place the scene 2.3 meters in front of the camera
+            Vector3 forward = cam.forward;
+            forward.y = 0f; // Keep it level
+            forward.Normalize();
+
+            scene.transform.position = cam.position + forward * 2.3f;
+
+            // Step 2: Make the scene look at the player
+            scene.transform.LookAt(new Vector3(cam.position.x, scene.transform.position.y, cam.position.z));
         }
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
             SaveCanvasAsImage();
+        }
+
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            toggleLerp = !toggleLerp;
+            Debug.Log("Lerp toggled: " + toggleLerp);
+            if(toggleLerp)
+                textToggleSmooth.text = "Smoothness is On";
+            else
+                textToggleSmooth.text = "Smoothness is Off";
+            // Update the text based on the toggle state
+            
         }
 
         // Perform a raycast from the head (Main Camera)
@@ -608,13 +672,43 @@ public class HeadDrawing : MonoBehaviour
                 Vector2 localPoint;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, hit.point, null, out localPoint);
 
-                // Map the local point to texture coordinates
-                int texX = (int)(localPoint.x + canvasRect.sizeDelta.x / 2);
-                int texY = (int)(localPoint.y + canvasRect.sizeDelta.y / 2);
+                // Apply smoothing if enabled
+                if (toggleLerp)
+                {
+                    if(firstPoint)
+                        smoothedLocalPoint = localPoint; // Initialize smoothedLocalPoint to the first point
+                    else
+                        smoothedLocalPoint = Vector2.Lerp(smoothedLocalPoint, localPoint, smoothingFactor);
+                }
+                else
+                {
+                    smoothedLocalPoint = localPoint;
+                }
 
-                // Draw on the texture
-                DrawCircle(texX, texY, brushSize, brushColor);
-                drawingTexture.Apply();
+                // Don't smooth the first point
+                if (firstPoint)
+                {
+                    int texX = (int)(localPoint.x + canvasRect.sizeDelta.x / 2);
+                    int texY = (int)(localPoint.y + canvasRect.sizeDelta.y / 2);
+                    firstPoint = false; // Set to false after the first point
+
+                    // Draw on the texture
+                    DrawCircle(texX, texY, brushSize, brushColor);
+                    drawingTexture.Apply();
+                    SendCoordinates(texX, texY);
+                }
+                else
+                {
+                    // Map the local point to texture coordinates
+                    int texX = (int)(smoothedLocalPoint.x + canvasRect.sizeDelta.x / 2);
+                    int texY = (int)(smoothedLocalPoint.y + canvasRect.sizeDelta.y / 2);
+                    // Draw on the texture
+                    DrawCircle(texX, texY, brushSize, brushColor);
+                    drawingTexture.Apply();
+                    SendCoordinates(texX, texY);
+                }
+                
+                
             }
         }
         else
@@ -656,6 +750,29 @@ public class HeadDrawing : MonoBehaviour
             currentToneGroup = baseColor; // Set the current tone group
         }
     }
+    
+    private void SendCoordinates(int x, int y)
+    {
+        lock (this)
+        {
+            if (stream != null && stream.CanWrite)
+            {
+                try
+                {
+                    string message = $"{x},{y}\n";
+                    byte[] data = Encoding.ASCII.GetBytes(message);
+                    stream.Write(data, 0, data.Length);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError("Error sending data: " + ex.Message);
+                    stream = null;
+                    connectedClient = null;
+                }
+            }
+        }
+    }
+
 
     void HideColorTones()
     {
@@ -757,4 +874,58 @@ public class HeadDrawing : MonoBehaviour
         flipped.Apply();
         return flipped;
     }
+    void PrintLocalIPAddress()
+    {
+        string localIP = "Not available";
+        var host = Dns.GetHostEntry(Dns.GetHostName());
+        foreach (var ip in host.AddressList)
+        {
+            if (ip.AddressFamily == AddressFamily.InterNetwork)
+            {
+                localIP = ip.ToString();
+                break;
+            }
+        }
+        Debug.Log("Local IP Address: " + localIP);
+    }
+
+    void StartServer()
+    {
+        try
+        {
+            IPAddress ip = IPAddress.Any;
+            tcpListener = new TcpListener(ip, port);
+            tcpListener.Start();
+            Debug.Log("TCP Server started on port " + port);
+
+            while (true)
+            {
+                Debug.Log("Waiting for connection...");
+                connectedClient = tcpListener.AcceptTcpClient();
+                stream = connectedClient.GetStream();
+                Debug.Log("Client connected: " + connectedClient.Client.RemoteEndPoint);
+
+                // Echo loop
+                byte[] buffer = new byte[1024];
+                int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                Debug.Log("Received: " + received);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("TCP Server error: " + e.Message);
+        }
+    }
+
+
+    void OnApplicationQuit()
+    {
+        tcpListener?.Stop();
+        stream?.Close();
+        connectedClient?.Close();
+        if (tcpThread != null && tcpThread.IsAlive)
+            tcpThread.Abort();
+    }
+
 }

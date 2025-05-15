@@ -38,7 +38,7 @@
     },
     "com.meta.xr.sdk.core": {
       "version": "74.0.2",
-      "depth": 1,
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
