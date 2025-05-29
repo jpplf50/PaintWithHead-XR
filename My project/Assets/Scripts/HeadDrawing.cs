@@ -21,6 +21,13 @@ public class HeadDrawing : MonoBehaviour
     private NetworkStream stream;
     public int port = 5005;
 
+    // Sequence logic
+    public bool isSequenceActive = false; // Flag to check if the sequence is active - send everything after each stroke
+    List<Vector2> coordinates = new List<Vector2>();
+
+    List<string> listOfCoordinates = new List<string>(); // List to store coordinates as strings
+
+    public bool isSendingEnabled = true; // Flag to enable/disable drawing
 
     public GameObject scene; // Whole scene (buttons + canvas)
 
@@ -30,6 +37,8 @@ public class HeadDrawing : MonoBehaviour
     private bool firstPoint = true; // Flag to check if it's the first point
     public TextMeshProUGUI textToggleSmooth; // Assign the Text GameObject in the Inspector
 
+    public TextMeshProUGUI textToggleSequence; // Assign the Text GameObject in the Inspector
+    public TextMeshProUGUI textToggleSending; // Assign the Text GameObject in the Inspector
     public Canvas drawingCanvas; // Assign your Canvas in the Inspector
     public float raycastDistance = 10f;
     public float brushSize = 0.01f; // Current brush size
@@ -304,13 +313,59 @@ public class HeadDrawing : MonoBehaviour
             isDrawing = !isDrawing; // Toggle the drawing state
             cursorLine.enabled = !isDrawing; // Show the cursor line when not drawing
             Debug.Log("Drawing toggled: " + isDrawing);
-            if(isDrawing)
+            StringBuilder messageBuilder = new StringBuilder();
+            foreach (var coord in coordinates)
+            {
+                messageBuilder.Append($"{coord[0]},{coord[1]} ");
+            }
+            messageBuilder.Append("\n"); // End the message with a newline
+            listOfCoordinates.Add(messageBuilder.ToString()); // Add the coordinates to the list
+            if (isDrawing)
                 firstPoint = true; //make sure first point is not smothed
+            if (!isDrawing && isSequenceActive)
+            {
+                SendCoordinatesSequenced(coordinates); // Send the coordinates when drawing is stopped
+            }
+            
+            else
+            {
+                coordinates.Clear(); // Clear the coordinates when starting a new drawing
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            foreach (string coordList in listOfCoordinates)
+            {
+                Debug.Log("Sending coordinates from list: " + coordList);
+                SendString(coordList); // Send all coordinates in the list
+            }
+        }
+        
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            isSendingEnabled = !isSendingEnabled; // Toggle sending state
+            Debug.Log("Sending toggled: " + isSendingEnabled);
+            if (isSendingEnabled)
+                textToggleSending.text = "Sending Mode: On";
+            else
+                textToggleSending.text = "Sending Mode: Off";
+        }
+
+        if (Input.GetKeyDown(KeyCode.S))
+        {
+            isSequenceActive = !isSequenceActive; // Change the sequence mode
+            Debug.Log("Toggled sequence mode: " + isSequenceActive);
+            if (isSequenceActive)
+                textToggleSequence.text = "Sequence Mode: On";
+            else
+                textToggleSequence.text = "Sequence Mode: Off";
         }
 
         if (Input.GetKeyDown(KeyCode.C))
         {
             ClearTexture();
+            listOfCoordinates.Clear(); // Clear the list of coordinates
             Debug.Log("Canvas cleared");
         }
 
@@ -585,6 +640,7 @@ public class HeadDrawing : MonoBehaviour
                     if (gazeTimer >= 4f)
                     {
                         ClearTexture();
+                        listOfCoordinates.Clear(); // Clear the list of coordinates
                         Debug.Log("Cleared the canvas");
                         gazeTimer = 0f; // Reset the timer
                     }
@@ -695,7 +751,11 @@ public class HeadDrawing : MonoBehaviour
                     // Draw on the texture
                     DrawCircle(texX, texY, brushSize, brushColor);
                     drawingTexture.Apply();
-                    SendCoordinates(texX, texY);
+                    Vector2 temp = new Vector2(texX, texY);
+                    coordinates.Add(temp); // Add the coordinates to the list
+                    if (!isSequenceActive && isSendingEnabled)
+                        SendCoordinates(texX, texY);
+                    
                 }
                 else
                 {
@@ -705,7 +765,10 @@ public class HeadDrawing : MonoBehaviour
                     // Draw on the texture
                     DrawCircle(texX, texY, brushSize, brushColor);
                     drawingTexture.Apply();
-                    SendCoordinates(texX, texY);
+                    Vector2 temp = new Vector2(texX, texY);
+                    coordinates.Add(temp); // Add the coordinates to the list
+                    if (!isSequenceActive && isSendingEnabled)
+                        SendCoordinates(texX, texY);
                 }
                 
                 
@@ -772,6 +835,58 @@ public class HeadDrawing : MonoBehaviour
             }
         }
     }
+
+    void SendCoordinatesSequenced(List<Vector2> coordinates)
+    {
+        lock (this)
+        {
+            if (stream != null && stream.CanWrite)
+            {
+                try
+                {
+                    StringBuilder messageBuilder = new StringBuilder();
+                    foreach (var coord in coordinates)
+                    {
+                        messageBuilder.Append($"{coord[0]},{coord[1]} ");
+                    }
+                    messageBuilder.Append("\n"); // End the message with a newline
+                    byte[] data = Encoding.ASCII.GetBytes(messageBuilder.ToString());
+                    stream.Write(data, 0, data.Length);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError("Error sending sequenced data: " + ex.Message);
+                    stream = null;
+                    connectedClient = null;
+                }
+            }
+        }
+    }
+
+    private void SendString(string message)
+    {
+        lock (this)
+        {
+            if (stream != null && stream.CanWrite)
+            {
+                try
+                {
+                    if (!message.EndsWith("\n"))
+                        message += "\n"; // Ensure newline termination if needed
+
+                    byte[] data = Encoding.ASCII.GetBytes(message);
+                    stream.Write(data, 0, data.Length);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError("Error sending string data: " + ex.Message);
+                    stream = null;
+                    connectedClient = null;
+                }
+            }
+        }
+    }
+
 
 
     void HideColorTones()
