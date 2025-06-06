@@ -10,10 +10,16 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using UnityEngine.Windows.Speech;
+using System.Linq;
 
 
 public class HeadDrawing : MonoBehaviour
 {
+    // Speech recognition variables
+    private KeywordRecognizer keywordRecognizer;
+    private Dictionary<string, Action> voiceCommands;
+
     // Networking variables
     private TcpListener tcpListener;
     private Thread tcpThread;
@@ -276,6 +282,33 @@ public class HeadDrawing : MonoBehaviour
         tcpThread.IsBackground = true;
         tcpThread.Start();
 
+        // Speech recognition setup
+        voiceCommands = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "start", ToggleDrawing },
+            { "hi", ToggleDrawing},
+            { "stop", ToggleDrawing },
+            { "draw", ToggleDrawing },
+            { "comenzar", ToggleDrawing },
+            { "empezar", ToggleDrawing },
+            { "dibujo", ToggleDrawing },
+            { "pintar", ToggleDrawing },
+            { "si", ToggleDrawing },
+            { "no", ToggleDrawing },
+            { "dibujar", ToggleDrawing },
+            { "parar", ToggleDrawing }
+        };
+
+        keywordRecognizer = new KeywordRecognizer(voiceCommands.Keys.ToArray());
+        keywordRecognizer.OnPhraseRecognized += OnPhraseRecognized;
+        keywordRecognizer.Start();
+
+        Debug.Log("🎤 Voice recognizer started...");
+
+        foreach (var device in Microphone.devices)
+        {
+            Debug.Log("Microphone detected: " + device);
+        }
         
     }
 
@@ -310,27 +343,7 @@ public class HeadDrawing : MonoBehaviour
         // Toggle drawing when the grab button is pressed
         if (grabAction.action.triggered || Input.GetKeyDown(KeyCode.D))
         {
-            isDrawing = !isDrawing; // Toggle the drawing state
-            cursorLine.enabled = !isDrawing; // Show the cursor line when not drawing
-            Debug.Log("Drawing toggled: " + isDrawing);
-            StringBuilder messageBuilder = new StringBuilder();
-            foreach (var coord in coordinates)
-            {
-                messageBuilder.Append($"{coord[0]},{coord[1]} ");
-            }
-            messageBuilder.Append("\n"); // End the message with a newline
-            listOfCoordinates.Add(messageBuilder.ToString()); // Add the coordinates to the list
-            if (isDrawing)
-                firstPoint = true; //make sure first point is not smothed
-            if (!isDrawing && isSequenceActive)
-            {
-                SendCoordinatesSequenced(coordinates); // Send the coordinates when drawing is stopped
-            }
-            
-            else
-            {
-                coordinates.Clear(); // Clear the coordinates when starting a new drawing
-            }
+            ToggleDrawing();
         }
 
         if (Input.GetKeyDown(KeyCode.E))
@@ -1032,6 +1045,40 @@ public class HeadDrawing : MonoBehaviour
             Debug.LogError("TCP Server error: " + e.Message);
         }
     }
+    // Speech recognition event handler
+    private void OnPhraseRecognized(PhraseRecognizedEventArgs args)
+    {
+        Debug.Log("Recognized phrase: " + args.text);
+        // Check if the recognized phrase matches any voice command
+        if (voiceCommands.TryGetValue(args.text, out var action))
+        {
+            action.Invoke();
+        }
+    }
+
+    // Speech recognition toggle method
+    private void ToggleDrawing()
+    {
+        isDrawing = !isDrawing;
+        cursorLine.enabled = !isDrawing;
+        Debug.Log("Drawing toggled via voice: " + isDrawing);
+
+        StringBuilder messageBuilder = new StringBuilder();
+        foreach (var coord in coordinates)
+        {
+            messageBuilder.Append($"{coord[0]},{coord[1]} ");
+        }
+        messageBuilder.Append("\n");
+        listOfCoordinates.Add(messageBuilder.ToString());
+
+        if (isDrawing)
+            firstPoint = true;
+        if (!isDrawing && isSequenceActive)
+            SendCoordinatesSequenced(coordinates);
+        else
+            coordinates.Clear();
+    }
+
 
 
     void OnApplicationQuit()

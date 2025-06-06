@@ -8,3 +8,5 @@
 
 # Unity cache packages
 **/PackageCache/
+# Artifact
+**/Library/ArtifactDB
