@@ -33,7 +33,6 @@ public class HeadDrawing : MonoBehaviour
 
     List<string> listOfCoordinates = new List<string>(); // List to store coordinates as strings
 
-    public bool isSendingEnabled = true; // Flag to enable/disable drawing
 
     // Drawing mode
     public int drawingMode = 0; // 0 for real time, 1 for sequence, 2 for printing
@@ -41,7 +40,6 @@ public class HeadDrawing : MonoBehaviour
     public GameObject scene; // Whole scene (buttons + canvas)
 
     private Vector2 smoothedLocalPoint; // Smoothed local point for drawing
-    private bool toggleLerp = false; // Toggle for lerping the indicator position
     public float smoothingFactor = 0.1f; // Try 0.05 to 0.2 depending on responsiveness
     private bool firstPoint = true; // Flag to check if it's the first point
     public TextMeshProUGUI textRealTime; // Assign the Text GameObject in the Inspector
@@ -300,7 +298,12 @@ public class HeadDrawing : MonoBehaviour
             { "si", ToggleDrawing },
             { "no", ToggleDrawing },
             { "dibujar", ToggleDrawing },
-            { "parar", ToggleDrawing }
+            { "parar", ToggleDrawing },
+            { "cancel", CancelStroke },
+            { "erase", CancelStroke },
+            { "cancelar", CancelStroke },
+            { "borrar", CancelStroke },
+            { "deshacer", CancelStroke }
         };
 
         keywordRecognizer = new KeywordRecognizer(voiceCommands.Keys.ToArray());
@@ -944,6 +947,7 @@ public class HeadDrawing : MonoBehaviour
         }
         drawingTexture.SetPixels(clearPixels);
         drawingTexture.Apply();
+        listOfCoordinates.Clear();
     }
 
     public void SaveCanvasAsImage()
@@ -1068,6 +1072,80 @@ public class HeadDrawing : MonoBehaviour
         else
             coordinates.Clear();
     }
+
+    private void CancelStroke()
+    {
+        Debug.Log("🗑️ Cancel command triggered");
+
+        switch (drawingMode)
+        {
+            case 0:
+                Debug.Log("❌ Cannot cancel strokes in real-time mode.");
+                break;
+
+            case 1:
+                if (isDrawing)
+                {
+                    Debug.Log("🛑 Cancelling current stroke in sequence mode.");
+                    isDrawing = false;
+                    coordinates.Clear();
+                    cursorLine.enabled = true;
+
+                    // Clear canvas and redraw existing (already committed) strokes
+                    ClearTexture();
+                    RedrawAllStrokes();
+                }
+                else
+                {
+                    Debug.Log("⚠️ No stroke in progress to cancel.");
+                }
+                break;
+
+            case 2:
+                if (isDrawing)
+                {
+                    Debug.Log("🛑 Cancelling current stroke in print mode (mid-stroke).");
+                    isDrawing = false;
+                    coordinates.Clear();
+                    cursorLine.enabled = true;
+                }
+                else if (listOfCoordinates.Count > 0)
+                {
+                    Debug.Log("⏪ Cancelling last stroke in print mode (post-stroke).");
+                    listOfCoordinates.RemoveAt(listOfCoordinates.Count - 1);
+                }
+                else
+                {
+                    Debug.Log("⚠️ No strokes to cancel.");
+                }
+
+                // Always clear and redraw what's left
+                ClearTexture();
+                RedrawAllStrokes();
+                break;
+        }
+    }
+
+    private void RedrawAllStrokes()
+    {
+        foreach (string stroke in listOfCoordinates)
+        {
+            string[] points = stroke.Trim().Split(' ');
+            foreach (string point in points)
+            {
+                string[] coords = point.Split(',');
+                if (coords.Length == 2 &&
+                    float.TryParse(coords[0], out float x) &&
+                    float.TryParse(coords[1], out float y))
+                {
+                    DrawCircle((int)x, (int)y, brushSize, brushColor);
+                }
+            }
+        }
+        drawingTexture.Apply();
+    }
+
+
 
 
 
