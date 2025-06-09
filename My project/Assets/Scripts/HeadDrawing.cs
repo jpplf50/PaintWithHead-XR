@@ -35,16 +35,19 @@ public class HeadDrawing : MonoBehaviour
 
     public bool isSendingEnabled = true; // Flag to enable/disable drawing
 
+    // Drawing mode
+    public int drawingMode = 0; // 0 for real time, 1 for sequence, 2 for printing
+
     public GameObject scene; // Whole scene (buttons + canvas)
 
     private Vector2 smoothedLocalPoint; // Smoothed local point for drawing
     private bool toggleLerp = false; // Toggle for lerping the indicator position
     public float smoothingFactor = 0.1f; // Try 0.05 to 0.2 depending on responsiveness
     private bool firstPoint = true; // Flag to check if it's the first point
-    public TextMeshProUGUI textToggleSmooth; // Assign the Text GameObject in the Inspector
+    public TextMeshProUGUI textRealTime; // Assign the Text GameObject in the Inspector
 
-    public TextMeshProUGUI textToggleSequence; // Assign the Text GameObject in the Inspector
-    public TextMeshProUGUI textToggleSending; // Assign the Text GameObject in the Inspector
+    public TextMeshProUGUI textSequence; // Assign the Text GameObject in the Inspector
+    public TextMeshProUGUI textPrint; // Assign the Text GameObject in the Inspector
     public Canvas drawingCanvas; // Assign your Canvas in the Inspector
     public float raycastDistance = 10f;
     public float brushSize = 0.01f; // Current brush size
@@ -210,6 +213,7 @@ public class HeadDrawing : MonoBehaviour
     void Start()
     {
         PrintLocalIPAddress(); // Print the local IP address
+        textRealTime.color = Color.green; // Set initial color for real-time mode
         // Initialize the drawing texture
         canvasRect = drawingCanvas.GetComponent<RectTransform>();
         drawingTexture = new Texture2D((int)canvasRect.sizeDelta.x, (int)canvasRect.sizeDelta.y);
@@ -305,10 +309,10 @@ public class HeadDrawing : MonoBehaviour
 
         Debug.Log("🎤 Voice recognizer started...");
 
-        foreach (var device in Microphone.devices)
+        /*foreach (var device in Microphone.devices)
         {
             Debug.Log("Microphone detected: " + device);
-        }
+        }*/
         
     }
 
@@ -357,24 +361,28 @@ public class HeadDrawing : MonoBehaviour
         
         if (Input.GetKeyDown(KeyCode.G))
         {
-            isSendingEnabled = !isSendingEnabled; // Toggle sending state
-            Debug.Log("Sending toggled: " + isSendingEnabled);
-            if (isSendingEnabled)
-                textToggleSending.text = "Sending Mode: On";
-            else
-                textToggleSending.text = "Sending Mode: Off";
+            switch (drawingMode)
+            {
+                case 0:
+                    drawingMode = 1; // Switch to sequence mode
+                    textRealTime.color = Color.white; // Reset color
+                    textSequence.color = Color.green; // Set sequence mode color
+                    break;
+                case 1:
+                    drawingMode = 2; // Switch to print mode
+                    textSequence.color = Color.white; // Reset color
+                    textPrint.color = Color.green; // Set print mode color
+                    break;
+                case 2:
+                    drawingMode = 0; // Switch back to real-time mode
+                    textPrint.color = Color.white; // Reset color
+                    textRealTime.color = Color.green; // Set real-time mode color
+                    break;
+                default:
+                    break;
+            }
         }
-
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            isSequenceActive = !isSequenceActive; // Change the sequence mode
-            Debug.Log("Toggled sequence mode: " + isSequenceActive);
-            if (isSequenceActive)
-                textToggleSequence.text = "Sequence Mode: On";
-            else
-                textToggleSequence.text = "Sequence Mode: Off";
-        }
-
+        
         if (Input.GetKeyDown(KeyCode.C))
         {
             ClearTexture();
@@ -402,17 +410,7 @@ public class HeadDrawing : MonoBehaviour
             SaveCanvasAsImage();
         }
 
-        if (Input.GetKeyDown(KeyCode.L))
-        {
-            toggleLerp = !toggleLerp;
-            Debug.Log("Lerp toggled: " + toggleLerp);
-            if(toggleLerp)
-                textToggleSmooth.text = "Smoothness is On";
-            else
-                textToggleSmooth.text = "Smoothness is Off";
-            // Update the text based on the toggle state
-            
-        }
+        
 
         // Perform a raycast from the head (Main Camera)
         Ray ray = new Ray(transform.position, transform.forward);
@@ -741,22 +739,11 @@ public class HeadDrawing : MonoBehaviour
                 Vector2 localPoint;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, hit.point, null, out localPoint);
 
-                // Apply smoothing if enabled
-                if (toggleLerp)
-                {
-                    if(firstPoint)
-                        smoothedLocalPoint = localPoint; // Initialize smoothedLocalPoint to the first point
-                    else
-                        smoothedLocalPoint = Vector2.Lerp(smoothedLocalPoint, localPoint, smoothingFactor);
-                }
-                else
-                {
-                    smoothedLocalPoint = localPoint;
-                }
 
                 // Don't smooth the first point
                 if (firstPoint)
                 {
+                    smoothedLocalPoint = localPoint; // Use the first point directly
                     int texX = (int)(localPoint.x + canvasRect.sizeDelta.x / 2);
                     int texY = (int)(localPoint.y + canvasRect.sizeDelta.y / 2);
                     firstPoint = false; // Set to false after the first point
@@ -766,12 +753,14 @@ public class HeadDrawing : MonoBehaviour
                     drawingTexture.Apply();
                     Vector2 temp = new Vector2(texX, texY);
                     coordinates.Add(temp); // Add the coordinates to the list
-                    if (!isSequenceActive && isSendingEnabled)
+                    if(drawingMode == 0) // Normal drawing mode
                         SendCoordinates(texX, texY);
+                    
                     
                 }
                 else
                 {
+                    smoothedLocalPoint = Vector2.Lerp(smoothedLocalPoint, localPoint, smoothingFactor); // Smooth the points
                     // Map the local point to texture coordinates
                     int texX = (int)(smoothedLocalPoint.x + canvasRect.sizeDelta.x / 2);
                     int texY = (int)(smoothedLocalPoint.y + canvasRect.sizeDelta.y / 2);
@@ -780,8 +769,9 @@ public class HeadDrawing : MonoBehaviour
                     drawingTexture.Apply();
                     Vector2 temp = new Vector2(texX, texY);
                     coordinates.Add(temp); // Add the coordinates to the list
-                    if (!isSequenceActive && isSendingEnabled)
+                    if(drawingMode == 0) // Normal drawing mode
                         SendCoordinates(texX, texY);
+                    
                 }
                 
                 
@@ -1073,7 +1063,7 @@ public class HeadDrawing : MonoBehaviour
 
         if (isDrawing)
             firstPoint = true;
-        if (!isDrawing && isSequenceActive)
+        if (drawingMode == 1) // If in sequence mode
             SendCoordinatesSequenced(coordinates);
         else
             coordinates.Clear();

@@ -3290,11 +3290,12 @@ MonoBehaviour:
   port: 5005
   isSequenceActive: 0
   isSendingEnabled: 0
+  drawingMode: 0
   scene: {fileID: 531451228}
   smoothingFactor: 0.1
-  textToggleSmooth: {fileID: 2125849739}
-  textToggleSequence: {fileID: 1252313963}
-  textToggleSending: {fileID: 1808676766}
+  textRealTime: {fileID: 2125849739}
+  textSequence: {fileID: 1252313963}
+  textPrint: {fileID: 1808676766}
   drawingCanvas: {fileID: 466971079}
   raycastDistance: 30
   brushSize: 0.01
@@ -3589,11 +3590,12 @@ MonoBehaviour:
   port: 5005
   isSequenceActive: 0
   isSendingEnabled: 1
+  drawingMode: 0
   scene: {fileID: 0}
   smoothingFactor: 0.1
-  textToggleSmooth: {fileID: 0}
-  textToggleSequence: {fileID: 0}
-  textToggleSending: {fileID: 0}
+  textRealTime: {fileID: 0}
+  textSequence: {fileID: 0}
+  textPrint: {fileID: 0}
   drawingCanvas: {fileID: 466971079}
   raycastDistance: 30
   brushSize: 0.01
@@ -4498,7 +4500,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 409, y: -750}
+  m_AnchoredPosition: {x: 409, y: -703}
   m_SizeDelta: {x: 500.4, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1029356020
@@ -4523,18 +4525,13 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Draw: D
 
-    Sequence: S
-
-    Smooth: L
+    Mode: G
 
     Save: Space
 
     Clear: C
 
-    Send
-    all: E
-
-    Sending: G'
+    Send all: E'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -5058,7 +5055,7 @@ GameObject:
   - component: {fileID: 1252313964}
   - component: {fileID: 1252313963}
   m_Layer: 2
-  m_Name: SequenceToggleTxt
+  m_Name: SequenceTxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5103,7 +5100,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Sequenced is Off
+  m_text: Sequenced mode
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -5989,9 +5986,9 @@ RectTransform:
   - {fileID: 1288608805}
   - {fileID: 1888836416}
   - {fileID: 2125849737}
-  - {fileID: 1029356019}
   - {fileID: 1252313962}
   - {fileID: 1808676765}
+  - {fileID: 1029356019}
   m_Father: {fileID: 466971080}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -6418,7 +6415,7 @@ GameObject:
   - component: {fileID: 1808676767}
   - component: {fileID: 1808676766}
   m_Layer: 2
-  m_Name: SendingToggleTxt
+  m_Name: PrintTxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6463,7 +6460,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Sending is Off
+  m_text: Printing mode
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -7577,7 +7574,7 @@ GameObject:
   - component: {fileID: 2125849738}
   - component: {fileID: 2125849739}
   m_Layer: 2
-  m_Name: SmoothToggleTxt
+  m_Name: RealtimeTxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7630,7 +7627,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Smoothness is Off
+  m_text: Real-time mode
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
