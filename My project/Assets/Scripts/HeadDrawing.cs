@@ -13,6 +13,30 @@ using System.Threading;
 using UnityEngine.Windows.Speech;
 using System.Linq;
 
+[System.Serializable]
+public class Stroke
+{
+    public List<Vector2> points;
+    public Color color;
+
+    public Stroke(List<Vector2> points, Color color)
+    {
+        this.points = new List<Vector2>(points);
+        this.color = color;
+    }
+
+    public string Serialize()
+    {
+        StringBuilder builder = new StringBuilder();
+        foreach (var point in points)
+        {
+            builder.Append($"{point.x},{point.y} ");
+        }
+        builder.Append($"|{ColorUtility.ToHtmlStringRGB(color)}");
+        return builder.ToString();
+    }
+}
+
 
 public class HeadDrawing : MonoBehaviour
 {
@@ -31,7 +55,7 @@ public class HeadDrawing : MonoBehaviour
     public bool isSequenceActive = false; // Flag to check if the sequence is active - send everything after each stroke
     List<Vector2> coordinates = new List<Vector2>();
 
-    List<string> listOfCoordinates = new List<string>(); // List to store coordinates as strings
+    List<Stroke> strokes = new List<Stroke>(); // List to store strokes
 
 
     // Drawing mode
@@ -93,8 +117,8 @@ public class HeadDrawing : MonoBehaviour
     public GameObject[] plusSigns; // Assign the plus signs in the Inspector
     public Dictionary<string, List<Color>> colorTones = new Dictionary<string, List<Color>>()
     {
-        { "Red", new List<Color> 
-            { 
+        { "Red", new List<Color>
+            {
                 new Color(0.5f, 0, 0), // Maroon (Darkest Red)
                 new Color(0.7f, 0.1f, 0.1f), // Crimson
                 new Color(0.8f, 0, 0), // Dark Red
@@ -105,10 +129,10 @@ public class HeadDrawing : MonoBehaviour
                 new Color(1, 0.7f, 0.7f), // Blush
                 new Color(1, 0.8f, 0.8f), // Light Blush
                 new Color(1, 0.9f, 0.9f) // Very Light Blush (Lightest Red)
-            } 
+            }
         },
-        { "Green", new List<Color> 
-            { 
+        { "Green", new List<Color>
+            {
                 new Color(0, 0.2f, 0), // Forest Green (Darkest Green)
                 new Color(0, 0.4f, 0), // Emerald
                 new Color(0, 0.5f, 0), // Dark Green
@@ -119,10 +143,10 @@ public class HeadDrawing : MonoBehaviour
                 new Color(0.7f, 1, 0.7f), // Light Mint
                 new Color(0.8f, 1, 0.8f), // Pastel Green
                 new Color(0.9f, 1, 0.9f) // Very Light Mint (Lightest Green)
-            } 
+            }
         },
-        { "Blue", new List<Color> 
-            { 
+        { "Blue", new List<Color>
+            {
                 new Color(0, 0, 0.2f), // Navy (Darkest Blue)
                 new Color(0, 0, 0.4f), // Dark Blue
                 new Color(0, 0, 0.6f), // Medium Blue
@@ -133,10 +157,10 @@ public class HeadDrawing : MonoBehaviour
                 new Color(0.6f, 0.85f, 0.95f), // Slightly Lighter Baby Blue
                 new Color(0.7f, 0.9f, 0.98f), // Very Light Baby Blue
                 new Color(0.8f, 0.95f, 1) // Lightest Baby Blue
-            } 
+            }
         },
-        { "Yellow", new List<Color> 
-            { 
+        { "Yellow", new List<Color>
+            {
                 new Color(0.5f, 0.5f, 0), // Mustard (Darkest Yellow)
                 new Color(0.7f, 0.7f, 0), // Olive Yellow
                 new Color(0.8f, 0.8f, 0), // Dark Yellow
@@ -147,10 +171,10 @@ public class HeadDrawing : MonoBehaviour
                 new Color(1, 1, 0.7f), // Cream
                 new Color(1, 1, 0.8f), // Light Cream
                 new Color(1, 1, 0.9f) // Very Light Cream (Lightest Yellow)
-            } 
+            }
         },
-        { "Black", new List<Color> 
-            { 
+        { "Black", new List<Color>
+            {
                 new Color(0, 0, 0), // Pure Black (Darkest)
                 new Color(0.1f, 0.1f, 0.1f), // Dark Gray
                 new Color(0.2f, 0.2f, 0.2f), // Charcoal
@@ -161,10 +185,10 @@ public class HeadDrawing : MonoBehaviour
                 new Color(0.7f, 0.7f, 0.7f), // Silver
                 new Color(0.8f, 0.8f, 0.8f), // Platinum
                 new Color(0.9f, 0.9f, 0.9f) // Off-White (Lightest Black)
-            } 
+            }
         },
-        { "White", new List<Color> 
-            { 
+        { "White", new List<Color>
+            {
                 new Color(0.9f, 0.9f, 0.9f), // Off-White (Darkest White)
                 new Color(0.95f, 0.95f, 0.95f), // Snow
                 new Color(0.96f, 0.96f, 0.96f), // Light Snow
@@ -175,10 +199,10 @@ public class HeadDrawing : MonoBehaviour
                 new Color(1, 1, 1), // Pure White (Duplicate for consistency)
                 new Color(1, 1, 1), // Pure White (Duplicate for consistency)
                 new Color(1, 1, 1) // Pure White (Lightest White)
-            } 
+            }
         },
-        { "Orange", new List<Color> 
-            { 
+        { "Orange", new List<Color>
+            {
                 new Color(0.3f, 0.15f, 0), // Dark Brown (Darkest)
                 new Color(0.4f, 0.2f, 0), // Deep Brown
                 new Color(0.5f, 0.25f, 0), // Medium Brown
@@ -189,10 +213,10 @@ public class HeadDrawing : MonoBehaviour
                 new Color(1, 0.6f, 0.2f), // Bright Orange
                 new Color(1, 0.7f, 0.4f), // Light Orange
                 new Color(1, 0.8f, 0.6f) // Pastel Orange (Lightest)
-            } 
+            }
         },
-        { "Purple", new List<Color> 
-            { 
+        { "Purple", new List<Color>
+            {
                 new Color(0.3f, 0, 0.3f), // Darkest Purple
                 new Color(0.4f, 0, 0.4f), // Dark Purple
                 new Color(0.5f, 0, 0.5f), // Deep Purple
@@ -203,7 +227,7 @@ public class HeadDrawing : MonoBehaviour
                 new Color(1, 0.8f, 1), // Lavender
                 new Color(1, 0.9f, 1), // Light Lavender
                 new Color(1, 1, 1) // White (Lightest Purple)
-            } 
+            }
         }
     };
     private Dictionary<string, GameObject[]> colorToneSpheres = new Dictionary<string, GameObject[]>();
@@ -316,7 +340,7 @@ public class HeadDrawing : MonoBehaviour
         {
             Debug.Log("Microphone detected: " + device);
         }*/
-        
+
     }
 
     void InitializeColorTones()
@@ -331,7 +355,7 @@ public class HeadDrawing : MonoBehaviour
                 for (int i = 0; i < colorTones[baseColor].Count; i++)
                 {
                     GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    sphere.transform.position = plusSign.transform.position + new Vector3(-i/3f, 0, -i/3f); // Position the spheres
+                    sphere.transform.position = plusSign.transform.position + new Vector3(-i / 3f, 0, -i / 3f); // Position the spheres
                     sphere.transform.localScale = Vector3.one * 0.4f; // Scale down the spheres
                     sphere.GetComponent<Renderer>().material.color = colorTones[baseColor][i];
                     sphere.transform.SetParent(plusSign.transform, worldPositionStays: true);
@@ -341,8 +365,8 @@ public class HeadDrawing : MonoBehaviour
                 colorToneSpheres[baseColor] = toneSpheres.ToArray();
             }
         }
-    } 
-    
+    }
+
 
 
     void Update()
@@ -355,13 +379,14 @@ public class HeadDrawing : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.E))
         {
-            foreach (string coordList in listOfCoordinates)
+            foreach (Stroke stroke in strokes)
             {
-                Debug.Log("Sending coordinates from list: " + coordList);
-                SendString(coordList); // Send all coordinates in the list
+                string serialized = stroke.Serialize();
+                Debug.Log("Sending stroke: " + serialized);
+                SendString(serialized);
             }
         }
-        
+
         if (Input.GetKeyDown(KeyCode.G))
         {
             switch (drawingMode)
@@ -385,11 +410,11 @@ public class HeadDrawing : MonoBehaviour
                     break;
             }
         }
-        
+
         if (Input.GetKeyDown(KeyCode.C))
         {
             ClearTexture();
-            listOfCoordinates.Clear(); // Clear the list of coordinates
+            strokes.Clear(); // Clear the list of coordinates
             Debug.Log("Canvas cleared");
         }
 
@@ -413,7 +438,7 @@ public class HeadDrawing : MonoBehaviour
             SaveCanvasAsImage();
         }
 
-        
+
 
         // Perform a raycast from the head (Main Camera)
         Ray ray = new Ray(transform.position, transform.forward);
@@ -444,7 +469,7 @@ public class HeadDrawing : MonoBehaviour
                 cursorLine.SetPosition(0, Vector3.zero); // Start at the camera (local origin)
                 cursorLine.SetPosition(1, localHitPoint); // End at the hit point
             }
-            
+
             // Show and position the preview circle if not drawing
             if (previewCircle != null)
             {
@@ -500,6 +525,8 @@ public class HeadDrawing : MonoBehaviour
                         if (gazeTimer >= colorSelectionTime)
                         {
                             brushColor = toneSphere.GetComponent<Renderer>().material.color;
+                            if(drawingMode != 2) // Don't send color in print mode
+                                SendBrushColor(brushColor);
                             cursorLine.material = new Material(Shader.Find("Unlit/Color")) { color = new Color(brushColor.r, brushColor.g, brushColor.b, 0.3f) }; // Brush color line with alpha
                             Debug.Log("Selected color: " + brushColor);
 
@@ -529,7 +556,7 @@ public class HeadDrawing : MonoBehaviour
                             gazeTimer = 0f; // Reset the timer
                             HideColorTones(); // Hide the additional tones
                         }
-                            break;
+                        break;
                     }
                 }
                 if (isLookingAtColorTone) break;
@@ -554,6 +581,8 @@ public class HeadDrawing : MonoBehaviour
                     if (gazeTimer >= colorSelectionTime)
                     {
                         brushColor = sphere.GetComponent<Renderer>().material.color;
+                        if(drawingMode != 2) // Don't send color in print mode
+                                SendBrushColor(brushColor);
                         cursorLine.material = new Material(Shader.Find("Unlit/Color")) { color = new Color(brushColor.r, brushColor.g, brushColor.b, 0.3f) }; // Brush color line with alpha
                         Debug.Log("Selected color: " + brushColor);
 
@@ -654,7 +683,7 @@ public class HeadDrawing : MonoBehaviour
                     if (gazeTimer >= 4f)
                     {
                         ClearTexture();
-                        listOfCoordinates.Clear(); // Clear the list of coordinates
+                        strokes.Clear(); // Clear the list of coordinates
                         Debug.Log("Cleared the canvas");
                         gazeTimer = 0f; // Reset the timer
                     }
@@ -721,7 +750,7 @@ public class HeadDrawing : MonoBehaviour
                     gazeTimer = 0f; // Reset the timer
                 }
             }
-            
+
 
             // Reset progress if not looking at a sphere or brush size control
             if (!isLookingAtSphere && !isLookingAtBrushSizeControl && !isLookingAtClearCanvas && !isLookingAtPlusSign && !isLookingAtColorTone && !isLookingAtSaveCanvas && !isLookingAtForward && !isLookingAtBackward)
@@ -756,10 +785,10 @@ public class HeadDrawing : MonoBehaviour
                     drawingTexture.Apply();
                     Vector2 temp = new Vector2(texX, texY);
                     coordinates.Add(temp); // Add the coordinates to the list
-                    if(drawingMode == 0) // Normal drawing mode
+                    if (drawingMode == 0) // Normal drawing mode
                         SendCoordinates(texX, texY);
-                    
-                    
+
+
                 }
                 else
                 {
@@ -772,12 +801,12 @@ public class HeadDrawing : MonoBehaviour
                     drawingTexture.Apply();
                     Vector2 temp = new Vector2(texX, texY);
                     coordinates.Add(temp); // Add the coordinates to the list
-                    if(drawingMode == 0) // Normal drawing mode
+                    if (drawingMode == 0) // Normal drawing mode
                         SendCoordinates(texX, texY);
-                    
+
                 }
-                
-                
+
+
             }
         }
         else
@@ -788,7 +817,7 @@ public class HeadDrawing : MonoBehaviour
                 cursorLine.SetPosition(0, Vector3.zero); // Start at the camera (local origin)
                 cursorLine.SetPosition(1, Vector3.forward * raycastDistance); // End at max distance
             }
-            
+
             // Hide the preview circle if the raycast doesn't hit anything
             if (previewCircle != null)
             {
@@ -819,7 +848,7 @@ public class HeadDrawing : MonoBehaviour
             currentToneGroup = baseColor; // Set the current tone group
         }
     }
-    
+
     private void SendCoordinates(int x, int y)
     {
         lock (this)
@@ -893,8 +922,6 @@ public class HeadDrawing : MonoBehaviour
         }
     }
 
-
-
     void HideColorTones()
     {
         if (!string.IsNullOrEmpty(currentToneGroup) && colorToneSpheres.ContainsKey(currentToneGroup))
@@ -947,7 +974,7 @@ public class HeadDrawing : MonoBehaviour
         }
         drawingTexture.SetPixels(clearPixels);
         drawingTexture.Apply();
-        listOfCoordinates.Clear();
+        strokes.Clear();
     }
 
     public void SaveCanvasAsImage()
@@ -1056,19 +1083,18 @@ public class HeadDrawing : MonoBehaviour
         isDrawing = !isDrawing;
         cursorLine.enabled = !isDrawing;
         Debug.Log("Drawing toggled via voice: " + isDrawing);
-
-        StringBuilder messageBuilder = new StringBuilder();
-        foreach (var coord in coordinates)
+        if(coordinates.Count > 0 && !isDrawing) // If in sequence mode and not drawing, send coordinates
         {
-            messageBuilder.Append($"{coord[0]},{coord[1]} ");
+            strokes.Add(new Stroke(coordinates, brushColor));
         }
-        messageBuilder.Append("\n");
-        listOfCoordinates.Add(messageBuilder.ToString());
+        
 
         if (isDrawing)
             firstPoint = true;
-        if (drawingMode == 1) // If in sequence mode
+        if (drawingMode == 1 && !isDrawing && coordinates.Count > 0) // If in sequence mode and not drawing, send coordinates
+        {
             SendCoordinatesSequenced(coordinates);
+        }
         else
             coordinates.Clear();
     }
@@ -1109,10 +1135,10 @@ public class HeadDrawing : MonoBehaviour
                     coordinates.Clear();
                     cursorLine.enabled = true;
                 }
-                else if (listOfCoordinates.Count > 0)
+                else if (strokes.Count > 0)
                 {
                     Debug.Log("⏪ Cancelling last stroke in print mode (post-stroke).");
-                    listOfCoordinates.RemoveAt(listOfCoordinates.Count - 1);
+                    strokes.RemoveAt(strokes.Count - 1);
                 }
                 else
                 {
@@ -1128,21 +1154,37 @@ public class HeadDrawing : MonoBehaviour
 
     private void RedrawAllStrokes()
     {
-        foreach (string stroke in listOfCoordinates)
+        foreach (Stroke stroke in strokes)
         {
-            string[] points = stroke.Trim().Split(' ');
-            foreach (string point in points)
+            foreach (Vector2 coord in stroke.points)
             {
-                string[] coords = point.Split(',');
-                if (coords.Length == 2 &&
-                    float.TryParse(coords[0], out float x) &&
-                    float.TryParse(coords[1], out float y))
-                {
-                    DrawCircle((int)x, (int)y, brushSize, brushColor);
-                }
+                DrawCircle((int)coord.x, (int)coord.y, brushSize, stroke.color);
             }
         }
         drawingTexture.Apply();
+    }
+
+    private void SendBrushColor(Color color)
+    {
+        if (stream != null && stream.CanWrite)
+        {
+            try
+            {
+                string hexColor = ColorUtility.ToHtmlStringRGB(color); // e.g. FF0000
+                string message = $"COLOR:{hexColor}\n";
+                byte[] data = Encoding.ASCII.GetBytes(message);
+                stream.Write(data, 0, data.Length);
+                Debug.Log("🟡 Sent brush color: " + message.Trim());
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("Error sending brush color: " + ex.Message);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Stream is not available for sending brush color.");
+        }
     }
 
 
