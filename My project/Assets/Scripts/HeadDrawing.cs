@@ -32,7 +32,7 @@ public class Stroke
         {
             builder.Append($"{point.x},{point.y} ");
         }
-        builder.Append($"|{ColorUtility.ToHtmlStringRGB(color)}");
+        builder.Append($"#{ColorUtility.ToHtmlStringRGB(color)}");
         return builder.ToString();
     }
 }
@@ -1171,7 +1171,7 @@ public class HeadDrawing : MonoBehaviour
             try
             {
                 string hexColor = ColorUtility.ToHtmlStringRGB(color); // e.g. FF0000
-                string message = $"COLOR:{hexColor}\n";
+                string message = $"#{hexColor}\n";
                 byte[] data = Encoding.ASCII.GetBytes(message);
                 stream.Write(data, 0, data.Length);
                 Debug.Log("🟡 Sent brush color: " + message.Trim());
