@@ -18,11 +18,15 @@ public class Stroke
 {
     public List<Vector2> points;
     public Color color;
+    public string brushSize;
+    public float brushSizeValue;
 
-    public Stroke(List<Vector2> points, Color color)
+    public Stroke(List<Vector2> points, Color color, string brushSize)
     {
         this.points = new List<Vector2>(points);
         this.color = color;
+        this.brushSize = brushSize;
+        this.brushSizeValue = brushSize == "s" ? 0.005f : 0.02f; // Small or big brush size
     }
 
     public string Serialize()
@@ -32,7 +36,7 @@ public class Stroke
         {
             builder.Append($"{point.x},{point.y} ");
         }
-        builder.Append($"#{ColorUtility.ToHtmlStringRGB(color)}");
+        builder.Append($"#{ColorUtility.ToHtmlStringRGB(color)}{brushSize}");
         return builder.ToString();
     }
 }
@@ -72,7 +76,8 @@ public class HeadDrawing : MonoBehaviour
     public TextMeshProUGUI textPrint; // Assign the Text GameObject in the Inspector
     public Canvas drawingCanvas; // Assign your Canvas in the Inspector
     public float raycastDistance = 10f;
-    public float brushSize = 0.01f; // Current brush size
+    public float brushSize = 0.005f; // Current brush size
+    public string currentBrushSize = "s"; // Current brush size as a string ("s" small, "b" big)
     public Color brushColor = Color.black;
 
     private Texture2D drawingTexture;
@@ -115,7 +120,7 @@ public class HeadDrawing : MonoBehaviour
 
     // Color tone management
     public GameObject[] plusSigns; // Assign the plus signs in the Inspector
-    public Dictionary<string, List<Color>> colorTones = new Dictionary<string, List<Color>>()
+    /* public Dictionary<string, List<Color>> colorTones = new Dictionary<string, List<Color>>()
     {
         { "Red", new List<Color>
             {
@@ -229,13 +234,14 @@ public class HeadDrawing : MonoBehaviour
                 new Color(1, 1, 1) // White (Lightest Purple)
             }
         }
-    };
+    }; */
     private Dictionary<string, GameObject[]> colorToneSpheres = new Dictionary<string, GameObject[]>();
     private string currentToneGroup = ""; // Currently visible tone group
     void Start()
     {
         PrintLocalIPAddress(); // Print the local IP address
         textRealTime.color = Color.green; // Set initial color for real-time mode
+        brushSize = 0.005f;
         // Initialize the drawing texture
         canvasRect = drawingCanvas.GetComponent<RectTransform>();
         drawingTexture = new Texture2D((int)canvasRect.sizeDelta.x, (int)canvasRect.sizeDelta.y);
@@ -277,7 +283,7 @@ public class HeadDrawing : MonoBehaviour
         // Initialize the selected brush size control
         if (brushSizeControls.Length > 0)
         {
-            selectedBrushSizeControl = brushSizeControls[1]; // Default to "MediumBrush"
+            selectedBrushSizeControl = brushSizeControls[0]; // Default to "MediumBrush"
             selectedBrushSizeControl.GetComponent<Renderer>().material.color = brushColor; // Set to brush color
         }
 
@@ -301,7 +307,7 @@ public class HeadDrawing : MonoBehaviour
         }
 
         // Initialize color tone spheres
-        InitializeColorTones();
+        //InitializeColorTones();
 
         Debug.Log("Starting TCP thread...");
         tcpThread = new Thread(StartServer);
@@ -343,7 +349,7 @@ public class HeadDrawing : MonoBehaviour
 
     }
 
-    void InitializeColorTones()
+    /* void InitializeColorTones()
     {
         foreach (var plusSign in plusSigns)
         {
@@ -365,7 +371,7 @@ public class HeadDrawing : MonoBehaviour
                 colorToneSpheres[baseColor] = toneSpheres.ToArray();
             }
         }
-    }
+    } */
 
 
 
@@ -411,6 +417,16 @@ public class HeadDrawing : MonoBehaviour
             }
         }
 
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            RotateSceneAroundPlayer(-10f); // rotate counterclockwise
+        }
+        else if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            RotateSceneAroundPlayer(10f); // rotate clockwise
+        }
+
+
         if (Input.GetKeyDown(KeyCode.C))
         {
             ClearTexture();
@@ -418,7 +434,7 @@ public class HeadDrawing : MonoBehaviour
             Debug.Log("Canvas cleared");
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
+        /* if (Input.GetKeyDown(KeyCode.R))
         {
             Transform cam = Camera.main.transform;
 
@@ -431,7 +447,7 @@ public class HeadDrawing : MonoBehaviour
 
             // Step 2: Make the scene look at the player
             scene.transform.LookAt(new Vector3(cam.position.x, scene.transform.position.y, cam.position.z));
-        }
+        } */
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -480,7 +496,7 @@ public class HeadDrawing : MonoBehaviour
             }
 
             // Check if the user is looking at a plus sign
-            bool isLookingAtPlusSign = false;
+            /* bool isLookingAtPlusSign = false;
             foreach (var plusSign in plusSigns)
             {
                 if (hit.collider.gameObject == plusSign)
@@ -502,10 +518,10 @@ public class HeadDrawing : MonoBehaviour
                     }
                     break;
                 }
-            }
+            } */
 
             // Check if the user is looking at a color tone sphere
-            bool isLookingAtColorTone = false;
+            /* bool isLookingAtColorTone = false;
             foreach (var toneGroup in colorToneSpheres)
             {
                 foreach (var toneSphere in toneGroup.Value)
@@ -560,7 +576,7 @@ public class HeadDrawing : MonoBehaviour
                     }
                 }
                 if (isLookingAtColorTone) break;
-            }
+            } */
 
             // Check if the user is looking at a color sphere
             bool isLookingAtSphere = false;
@@ -633,22 +649,23 @@ public class HeadDrawing : MonoBehaviour
                     if (brushSizeGazeTimer >= brushSizeSelectionTime)
                     {
                         // Update brush size based on the control
-                        if (control.name == "SmallBrush")
+                        switch (control.name)
                         {
-                            brushSize = 0.005f;
-                            previewCircle.transform.localScale = Vector3.one * 0.01f;
-                        }
-                        else if (control.name == "MediumBrush")
-                        {
-                            brushSize = 0.01f;
-                            previewCircle.transform.localScale = Vector3.one * 0.02f;
-                        }
-                        else if (control.name == "LargeBrush")
-                        {
-                            brushSize = 0.02f;
-                            previewCircle.transform.localScale = Vector3.one * 0.04f;
+                            case "SmallBrush":
+                                brushSize = 0.005f;
+                                previewCircle.transform.localScale = Vector3.one * 0.02f; // Adjust size for small brush
+                                currentBrushSize = "s"; // Set current brush size to small
+                                break;
+                            case "MediumBrush":
+                                brushSize = 0.02f;
+                                previewCircle.transform.localScale = Vector3.one * 0.08f; // Adjust size for large brush
+                                currentBrushSize = "b"; // Set current brush size to big
+                                break;
                         }
 
+                        if(drawingMode != 2) // Don't send brush size in print mode
+                            SendBrushColor(brushColor); // Send the brush color to the server
+                        
                         // Update the selected brush size control
                         if (selectedBrushSizeControl != null)
                         {
@@ -711,7 +728,7 @@ public class HeadDrawing : MonoBehaviour
                 }
             }
 
-            bool isLookingAtForward = false;
+            /* bool isLookingAtForward = false;
             if (hit.collider.CompareTag("Forward"))
             {
                 isLookingAtForward = true;
@@ -749,11 +766,11 @@ public class HeadDrawing : MonoBehaviour
                     Debug.Log("Backward action triggered");
                     gazeTimer = 0f; // Reset the timer
                 }
-            }
+            } */
 
 
             // Reset progress if not looking at a sphere or brush size control
-            if (!isLookingAtSphere && !isLookingAtBrushSizeControl && !isLookingAtClearCanvas && !isLookingAtPlusSign && !isLookingAtColorTone && !isLookingAtSaveCanvas && !isLookingAtForward && !isLookingAtBackward)
+            if (!isLookingAtSphere && !isLookingAtBrushSizeControl && !isLookingAtClearCanvas && /* !isLookingAtPlusSign && !isLookingAtColorTone && */ !isLookingAtSaveCanvas /* && !isLookingAtForward && !isLookingAtBackward */)
             {
                 gazeTimer = 0f;
                 brushSizeGazeTimer = 0f;
@@ -1085,7 +1102,7 @@ public class HeadDrawing : MonoBehaviour
         Debug.Log("Drawing toggled via voice: " + isDrawing);
         if(coordinates.Count > 0 && !isDrawing) // If in sequence mode and not drawing, send coordinates
         {
-            strokes.Add(new Stroke(coordinates, brushColor));
+            strokes.Add(new Stroke(coordinates, brushColor, currentBrushSize));
         }
         
 
@@ -1158,7 +1175,7 @@ public class HeadDrawing : MonoBehaviour
         {
             foreach (Vector2 coord in stroke.points)
             {
-                DrawCircle((int)coord.x, (int)coord.y, brushSize, stroke.color);
+                DrawCircle((int)coord.x, (int)coord.y, stroke.brushSizeValue, stroke.color);
             }
         }
         drawingTexture.Apply();
@@ -1171,7 +1188,7 @@ public class HeadDrawing : MonoBehaviour
             try
             {
                 string hexColor = ColorUtility.ToHtmlStringRGB(color); // e.g. FF0000
-                string message = $"#{hexColor}\n";
+                string message = $"#{hexColor}{currentBrushSize}\n";
                 byte[] data = Encoding.ASCII.GetBytes(message);
                 stream.Write(data, 0, data.Length);
                 Debug.Log("🟡 Sent brush color: " + message.Trim());
@@ -1187,6 +1204,16 @@ public class HeadDrawing : MonoBehaviour
         }
     }
 
+    private void RotateSceneAroundPlayer(float angleDegrees)
+    {
+        Transform cam = Camera.main.transform;
+        Vector3 pivot = cam.position;
+
+        // Move scene around the player horizontally (Y-axis)
+        scene.transform.RotateAround(pivot, Vector3.up, angleDegrees);
+
+        Debug.Log($"🔄 Rotated scene by {angleDegrees}° around player");
+    }
 
 
 
