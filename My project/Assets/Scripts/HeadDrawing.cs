@@ -32,11 +32,11 @@ public class Stroke
     public string Serialize()
     {
         StringBuilder builder = new StringBuilder();
+        builder.Append($"#{ColorUtility.ToHtmlStringRGB(color)}{brushSize} ");
         foreach (var point in points)
         {
             builder.Append($"{point.x},{point.y} ");
         }
-        builder.Append($"#{ColorUtility.ToHtmlStringRGB(color)}{brushSize}");
         return builder.ToString();
     }
 }
@@ -78,7 +78,7 @@ public class HeadDrawing : MonoBehaviour
     public float raycastDistance = 10f;
     public float brushSize = 0.005f; // Current brush size
     public string currentBrushSize = "s"; // Current brush size as a string ("s" small, "b" big)
-    public Color brushColor = Color.black;
+    public Color brushColor = new Color(22f,22f,15f);
 
     private Texture2D drawingTexture;
     private RectTransform canvasRect;

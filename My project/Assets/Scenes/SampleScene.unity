@@ -3400,7 +3400,7 @@ MonoBehaviour:
   raycastDistance: 30
   brushSize: 0.01
   currentBrushSize: s
-  brushColor: {r: 0, g: 0, b: 0, a: 1}
+  brushColor: {r: 0.08627451, g: 0.08627451, b: 0.05882353, a: 1}
   indicatorFollowSpeed: 0.1
   grabAction: {fileID: 15759602096507913, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   previewCircle: {fileID: 247540256}
