@@ -26,7 +26,7 @@ public class Stroke
         this.points = new List<Vector2>(points);
         this.color = color;
         this.brushSize = brushSize;
-        this.brushSizeValue = brushSize == "s" ? 0.005f : 0.02f; // Small or big brush size
+        this.brushSizeValue = brushSize == "s" ? 0.0025f : 0.00673f; // Small or big brush size
     }
 
     public string Serialize()
@@ -76,7 +76,7 @@ public class HeadDrawing : MonoBehaviour
     public TextMeshProUGUI textPrint; // Assign the Text GameObject in the Inspector
     public Canvas drawingCanvas; // Assign your Canvas in the Inspector
     public float raycastDistance = 10f;
-    public float brushSize = 0.005f; // Current brush size
+    public float brushSize = 0.0025f; // Current brush size
     public string currentBrushSize = "s"; // Current brush size as a string ("s" small, "b" big)
     public Color brushColor = new Color(22f,22f,15f);
 
@@ -241,7 +241,7 @@ public class HeadDrawing : MonoBehaviour
     {
         PrintLocalIPAddress(); // Print the local IP address
         textRealTime.color = Color.green; // Set initial color for real-time mode
-        brushSize = 0.005f;
+        brushSize = 0.0025f;
         // Initialize the drawing texture
         canvasRect = drawingCanvas.GetComponent<RectTransform>();
         drawingTexture = new Texture2D((int)canvasRect.sizeDelta.x, (int)canvasRect.sizeDelta.y);
@@ -652,13 +652,13 @@ public class HeadDrawing : MonoBehaviour
                         switch (control.name)
                         {
                             case "SmallBrush":
-                                brushSize = 0.005f;
-                                previewCircle.transform.localScale = Vector3.one * 0.02f; // Adjust size for small brush
+                                brushSize = 0.0025f;
+                                previewCircle.transform.localScale = Vector3.one * 0.005f; // Adjust size for small brush
                                 currentBrushSize = "s"; // Set current brush size to small
                                 break;
                             case "MediumBrush":
-                                brushSize = 0.02f;
-                                previewCircle.transform.localScale = Vector3.one * 0.08f; // Adjust size for large brush
+                                brushSize = 0.00673f;
+                                previewCircle.transform.localScale = Vector3.one * 0.014f; // Adjust size for large brush
                                 currentBrushSize = "b"; // Set current brush size to big
                                 break;
                         }
@@ -994,6 +994,18 @@ public class HeadDrawing : MonoBehaviour
         strokes.Clear();
     }
 
+    void ClearTextureCancel()
+    {
+        Color[] clearPixels = new Color[drawingTexture.width * drawingTexture.height];
+        for (int i = 0; i < clearPixels.Length; i++)
+        {
+            clearPixels[i] = Color.white;
+        }
+        drawingTexture.SetPixels(clearPixels);
+        drawingTexture.Apply();
+    }
+
+
     public void SaveCanvasAsImage()
     {
         // Create a Texture2D from the drawing texture
@@ -1100,7 +1112,7 @@ public class HeadDrawing : MonoBehaviour
         isDrawing = !isDrawing;
         cursorLine.enabled = !isDrawing;
         Debug.Log("Drawing toggled via voice: " + isDrawing);
-        if(coordinates.Count > 0 && !isDrawing) // If in sequence mode and not drawing, send coordinates
+        if (coordinates.Count > 0 && !isDrawing)
         {
             strokes.Add(new Stroke(coordinates, brushColor, currentBrushSize));
         }
@@ -1108,10 +1120,10 @@ public class HeadDrawing : MonoBehaviour
 
         if (isDrawing)
             firstPoint = true;
-        if (drawingMode == 1 && !isDrawing && coordinates.Count > 0) // If in sequence mode and not drawing, send coordinates
+        /* if (drawingMode == 1 && !isDrawing && coordinates.Count > 0) // If in sequence mode and not drawing, send coordinates
         {
             SendCoordinatesSequenced(coordinates);
-        }
+        } */
         else
             coordinates.Clear();
     }
@@ -1161,9 +1173,9 @@ public class HeadDrawing : MonoBehaviour
                 {
                     Debug.Log("⚠️ No strokes to cancel.");
                 }
-
+                Debug.Log("Existem estes strokes ---- " + strokes.Count);
                 // Always clear and redraw what's left
-                ClearTexture();
+                ClearTextureCancel();
                 RedrawAllStrokes();
                 break;
         }
@@ -1171,8 +1183,10 @@ public class HeadDrawing : MonoBehaviour
 
     private void RedrawAllStrokes()
     {
+        Debug.Log("🔄 Redrawing all strokes on the canvas");
         foreach (Stroke stroke in strokes)
         {
+            Debug.Log($"Redrawing stroke with color {stroke.color} and size {stroke.brushSizeValue}");
             foreach (Vector2 coord in stroke.points)
             {
                 DrawCircle((int)coord.x, (int)coord.y, stroke.brushSizeValue, stroke.color);
