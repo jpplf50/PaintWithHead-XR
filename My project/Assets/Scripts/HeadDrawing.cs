@@ -12,12 +12,15 @@ using System.Text;
 using System.Threading;
 using UnityEngine.Windows.Speech;
 using System.Linq;
+using SFB;
 
 [System.Serializable]
 public class Stroke
 {
     public List<Vector2> points;
-    public Color color;
+    public string colorHex; // serialized in JSON
+    [NonSerialized] public Color color; // used at runtime, not saved
+
     public string brushSize;
     public float brushSizeValue;
 
@@ -25,6 +28,7 @@ public class Stroke
     {
         this.points = new List<Vector2>(points);
         this.color = color;
+        this.colorHex = ColorUtility.ToHtmlStringRGB(color); // Serialize color to hex string
         this.brushSize = brushSize;
         this.brushSizeValue = brushSize == "s" ? 0.0025f : 0.00673f; // Small or big brush size
     }
@@ -40,6 +44,20 @@ public class Stroke
         return builder.ToString();
     }
 }
+
+[System.Serializable]
+public class StrokeListWrapper
+{
+    public List<Stroke> strokes;
+
+    public StrokeListWrapper(List<Stroke> strokes)
+    {
+        this.strokes = strokes;
+    }
+}
+
+
+
 
 
 public class HeadDrawing : MonoBehaviour
@@ -78,7 +96,7 @@ public class HeadDrawing : MonoBehaviour
     public float raycastDistance = 10f;
     public float brushSize = 0.0025f; // Current brush size
     public string currentBrushSize = "s"; // Current brush size as a string ("s" small, "b" big)
-    public Color brushColor = new Color(22f,22f,15f);
+    public Color brushColor = new Color(22f, 22f, 15f);
 
     private Texture2D drawingTexture;
     private RectTransform canvasRect;
@@ -383,6 +401,17 @@ public class HeadDrawing : MonoBehaviour
             ToggleDrawing();
         }
 
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            var paths = StandaloneFileBrowser.OpenFilePanel("Open drawing", "", "json", false);
+            if (paths.Length > 0)
+            {
+                LoadStrokesFromJson(paths[0]);
+            }
+
+        }
+
+
         if (Input.GetKeyDown(KeyCode.E))
         {
             foreach (Stroke stroke in strokes)
@@ -597,8 +626,8 @@ public class HeadDrawing : MonoBehaviour
                     if (gazeTimer >= colorSelectionTime)
                     {
                         brushColor = sphere.GetComponent<Renderer>().material.color;
-                        if(drawingMode != 2) // Don't send color in print mode
-                                SendBrushColor(brushColor);
+                        if (drawingMode != 2) // Don't send color in print mode
+                            SendBrushColor(brushColor);
                         cursorLine.material = new Material(Shader.Find("Unlit/Color")) { color = new Color(brushColor.r, brushColor.g, brushColor.b, 0.3f) }; // Brush color line with alpha
                         Debug.Log("Selected color: " + brushColor);
 
@@ -663,9 +692,9 @@ public class HeadDrawing : MonoBehaviour
                                 break;
                         }
 
-                        if(drawingMode != 2) // Don't send brush size in print mode
+                        if (drawingMode != 2) // Don't send brush size in print mode
                             SendBrushColor(brushColor); // Send the brush color to the server
-                        
+
                         // Update the selected brush size control
                         if (selectedBrushSizeControl != null)
                         {
@@ -1032,6 +1061,20 @@ public class HeadDrawing : MonoBehaviour
         File.WriteAllBytes(filePath, bytes);
 
         Debug.Log("Canvas saved to: " + filePath);
+
+        foreach (var stroke in strokes)
+        {
+            stroke.colorHex = ColorUtility.ToHtmlStringRGB(stroke.color); // sync colorHex
+        }
+
+
+        string jsonPath = Path.ChangeExtension(filePath, ".json");
+        StrokeListWrapper wrapper = new StrokeListWrapper(strokes);
+
+        string json = JsonUtility.ToJson(wrapper, true); // false = compact
+
+        File.WriteAllText(jsonPath, json);
+        Debug.Log("📝 Saved strokes JSON to: " + jsonPath);
     }
 
     // Helper method to flip the texture vertically
@@ -1116,7 +1159,7 @@ public class HeadDrawing : MonoBehaviour
         {
             strokes.Add(new Stroke(coordinates, brushColor, currentBrushSize));
         }
-        
+
 
         if (isDrawing)
             firstPoint = true;
@@ -1195,6 +1238,21 @@ public class HeadDrawing : MonoBehaviour
         drawingTexture.Apply();
     }
 
+    private void RedrawAllStrokesLoad()
+{
+    foreach (Stroke stroke in strokes)
+    {
+        Color strokeColor = Color.white;
+        ColorUtility.TryParseHtmlString("#" + stroke.colorHex, out strokeColor);
+
+        foreach (Vector2 coord in stroke.points)
+        {
+            DrawCircle((int)coord.x, (int)coord.y, stroke.brushSizeValue, strokeColor);
+        }
+    }
+    drawingTexture.Apply();
+}
+
     private void SendBrushColor(Color color)
     {
         if (stream != null && stream.CanWrite)
@@ -1227,6 +1285,43 @@ public class HeadDrawing : MonoBehaviour
         scene.transform.RotateAround(pivot, Vector3.up, angleDegrees);
 
         Debug.Log($"🔄 Rotated scene by {angleDegrees}° around player");
+    }
+
+
+    public void LoadStrokesFromJson(string jsonPath)
+    {
+        if (!File.Exists(jsonPath))
+        {
+            Debug.LogWarning("⚠️ JSON file not found: " + jsonPath);
+            return;
+        }
+
+        string json = File.ReadAllText(jsonPath);
+        Debug.Log($"📂 Raw JSON content:\n{json}");
+
+        StrokeListWrapper wrapper = JsonUtility.FromJson<StrokeListWrapper>(json);
+
+        if (wrapper == null)
+        {
+            Debug.LogError("❌ Failed to parse wrapper. JsonUtility returned null.");
+            return;
+        }
+
+        if (wrapper.strokes == null)
+        {
+            Debug.LogError("❌ Wrapper parsed but 'strokes' is null.");
+            return;
+        }
+
+        foreach (var stroke in wrapper.strokes)
+        {
+            ColorUtility.TryParseHtmlString("#" + stroke.colorHex, out stroke.color);
+        }
+
+        strokes = wrapper.strokes;
+        ClearTextureCancel();
+        RedrawAllStrokesLoad();
+        Debug.Log($"✅ Loaded {strokes.Count} strokes from: {jsonPath}");
     }
 
 
