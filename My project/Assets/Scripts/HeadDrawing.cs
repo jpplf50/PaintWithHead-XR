@@ -94,8 +94,8 @@ public class HeadDrawing : MonoBehaviour
     public TextMeshProUGUI textPrint; // Assign the Text GameObject in the Inspector
     public Canvas drawingCanvas; // Assign your Canvas in the Inspector
     public float raycastDistance = 10f;
-    public float brushSize = 0.0025f; // Current brush size
-    public string currentBrushSize = "s"; // Current brush size as a string ("s" small, "b" big)
+    public float brushSize = 0.00673f; // Current brush size
+    public string currentBrushSize = "b"; // Current brush size as a string ("s" small, "b" big)
     public Color brushColor = new Color(22f, 22f, 15f);
 
     private Texture2D drawingTexture;
@@ -259,7 +259,7 @@ public class HeadDrawing : MonoBehaviour
     {
         PrintLocalIPAddress(); // Print the local IP address
         textRealTime.color = Color.green; // Set initial color for real-time mode
-        brushSize = 0.0025f;
+        brushSize = 0.00673f;
         // Initialize the drawing texture
         canvasRect = drawingCanvas.GetComponent<RectTransform>();
         drawingTexture = new Texture2D((int)canvasRect.sizeDelta.x, (int)canvasRect.sizeDelta.y);
@@ -301,7 +301,7 @@ public class HeadDrawing : MonoBehaviour
         // Initialize the selected brush size control
         if (brushSizeControls.Length > 0)
         {
-            selectedBrushSizeControl = brushSizeControls[0]; // Default to "MediumBrush"
+            selectedBrushSizeControl = brushSizeControls[1]; // Default to "MediumBrush"
             selectedBrushSizeControl.GetComponent<Renderer>().material.color = brushColor; // Set to brush color
         }
 

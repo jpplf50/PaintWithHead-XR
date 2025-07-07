@@ -2559,7 +2559,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &632769215
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3399,7 +3399,7 @@ MonoBehaviour:
   drawingCanvas: {fileID: 466971079}
   raycastDistance: 30
   brushSize: 0.01
-  currentBrushSize: s
+  currentBrushSize: b
   brushColor: {r: 0.08627451, g: 0.08627451, b: 0.05882353, a: 1}
   indicatorFollowSpeed: 0.1
   grabAction: {fileID: 15759602096507913, guid: c348712bda248c246b8c49b3db54643f, type: 3}
@@ -6295,7 +6295,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1617039669
 Transform:
   m_ObjectHideFlags: 0
