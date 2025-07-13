@@ -62,6 +62,8 @@ public class StrokeListWrapper
 
 public class HeadDrawing : MonoBehaviour
 {
+    private volatile bool allowDrawing = true; // Updated by TCP listener
+
     // Speech recognition variables
     private KeywordRecognizer keywordRecognizer;
     private Dictionary<string, Action> voiceCommands;
@@ -72,6 +74,8 @@ public class HeadDrawing : MonoBehaviour
     private TcpClient connectedClient;
     private NetworkStream stream;
     public int port = 5005;
+
+    private bool isConnected = false;
 
     // Sequence logic
     public bool isSequenceActive = false; // Flag to check if the sequence is active - send everything after each stroke
@@ -433,6 +437,7 @@ public class HeadDrawing : MonoBehaviour
                     break;
                 case 1:
                     drawingMode = 2; // Switch to print mode
+                    allowDrawing = true; // Allow drawing in print mode
                     textSequence.color = Color.white; // Reset color
                     textPrint.color = Color.green; // Set print mode color
                     break;
@@ -482,6 +487,13 @@ public class HeadDrawing : MonoBehaviour
         {
             SaveCanvasAsImage();
         }
+
+        if (drawingMode == 0)
+        {
+            textRealTime.text = allowDrawing ? "🟢 Listo para dibujar" : "⏳ Esperando al robot...";
+            textRealTime.color = allowDrawing ? Color.green : Color.red;
+        }
+
 
 
 
@@ -811,7 +823,7 @@ public class HeadDrawing : MonoBehaviour
             }
 
             // Draw on the texture if drawing is enabled and the raycast hits the Canvas
-            if (hit.collider.gameObject == drawingCanvas.gameObject && isDrawing)
+            if (hit.collider.gameObject == drawingCanvas.gameObject && isDrawing && allowDrawing)
             {
                 // Convert hit point to texture coordinates
                 Vector2 localPoint;
@@ -1110,34 +1122,80 @@ public class HeadDrawing : MonoBehaviour
         Debug.Log("Local IP Address: " + localIP);
     }
 
-    void StartServer()
+    private void StartServer()
     {
         try
         {
-            IPAddress ip = IPAddress.Any;
-            tcpListener = new TcpListener(ip, port);
+            tcpListener = new TcpListener(IPAddress.Any, port);
             tcpListener.Start();
-            Debug.Log("TCP Server started on port " + port);
 
-            while (true)
+            Debug.Log("📡 TCP Server started on port " + port);
+
+            // Accept client async
+            Thread acceptThread = new Thread(() =>
             {
-                Debug.Log("Waiting for connection...");
                 connectedClient = tcpListener.AcceptTcpClient();
-                stream = connectedClient.GetStream();
-                Debug.Log("Client connected: " + connectedClient.Client.RemoteEndPoint);
+                Debug.Log("🔌 Client connected");
 
-                // Echo loop
-                byte[] buffer = new byte[1024];
-                int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                Debug.Log("Received: " + received);
-            }
+                stream = connectedClient.GetStream();
+                allowDrawing = false; // initially block drawing until robot says GO
+
+                // Start listening thread
+                Thread receiveThread = new Thread(() =>
+                {
+                    try
+                    {
+                        byte[] buffer = new byte[1024];
+
+                        while (connectedClient != null && connectedClient.Connected)
+                        {
+                            if (stream != null && stream.DataAvailable)
+                            {
+                                int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                                if (bytesRead > 0)
+                                {
+                                    string received = Encoding.ASCII.GetString(buffer, 0, bytesRead).Trim();
+                                    Debug.Log("📥 Received: " + received);
+
+                                    if (received.Equals("GO", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        allowDrawing = true;
+                                        Debug.Log("✅ Drawing enabled by robot.");
+                                    }
+                                    else if (received.Equals("STOP", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        allowDrawing = false;
+                                        Debug.Log("⛔ Drawing disabled by robot.");
+                                    }
+                                }
+                            }
+
+                            Thread.Sleep(50); // Yield CPU
+                        }
+
+                        Debug.LogWarning("⚠️ TCP client disconnected.");
+                        isConnected = false;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError("❌ Error in receive thread: " + ex.Message);
+                        isConnected = false;
+                    }
+                });
+
+                receiveThread.IsBackground = true;
+                receiveThread.Start();
+            });
+
+            acceptThread.IsBackground = true;
+            acceptThread.Start();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Debug.LogError("TCP Server error: " + e.Message);
+            Debug.LogError("❌ TCP Server error: " + ex.Message);
         }
     }
+
     // Speech recognition event handler
     private void OnPhraseRecognized(PhraseRecognizedEventArgs args)
     {
@@ -1152,6 +1210,11 @@ public class HeadDrawing : MonoBehaviour
     // Speech recognition toggle method
     private void ToggleDrawing()
     {
+        if(allowDrawing == false)
+        {
+            Debug.Log("❌ Drawing is currently disabled by the robot.");
+            return;
+        }
         isDrawing = !isDrawing;
         cursorLine.enabled = !isDrawing;
         Debug.Log("Drawing toggled via voice: " + isDrawing);
